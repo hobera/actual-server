@@ -1,5 +1,4 @@
 let { Buffer } = require('buffer');
-let fs = require('fs/promises');
 let { join } = require('path');
 let express = require('express');
 let uuid = require('uuid');
@@ -9,7 +8,6 @@ let errorMiddleware = require('./util/error-middleware');
 let config = require('./load-config');
 let { getAccountDb } = require('./account-db');
 
-let simpleSync = require('./sync-simple');
 let fullSync = require('./sync-full');
 
 let actual = require('@actual-app/api');
@@ -138,14 +136,7 @@ app.post('/sync', async (req, res) => {
   let responsePb = new SyncPb.SyncResponse();
   responsePb.setMerkle(JSON.stringify(trie));
 
-  for (let i = 0; i < newMessages.length; i++) {
-    let msg = newMessages[i];
-    let envelopePb = new SyncPb.MessageEnvelope();
-    envelopePb.setTimestamp(msg.timestamp);
-    envelopePb.setIsencrypted(msg.is_encrypted === 1);
-    envelopePb.setContent(msg.content);
-    responsePb.addMessages(envelopePb);
-  }
+  newMessages.forEach(msg => responsePb.addMessages(msg));
 
   res.set('Content-Type', 'application/actual-sync');
   res.send(Buffer.from(responsePb.serializeBinary()));

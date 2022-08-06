@@ -1,5 +1,6 @@
 const fs = require('fs');
 const express = require('express');
+const actuator = require('express-actuator');
 const bodyParser = require('body-parser');
 const cors = require('cors');
 const config = require('./load-config');
@@ -25,8 +26,19 @@ app.get('/mode', (req, res) => {
   res.send(config.mode);
 });
 
+app.use(actuator()); // Provides /health, /metrics, /info
+
 // The web frontend
-app.use(express.static(__dirname + '/node_modules/@actual-app/web/build'));
+app.use((req, res, next) => {
+  res.set('Cross-Origin-Opener-Policy', 'same-origin');
+  res.set('Cross-Origin-Embedder-Policy', 'require-corp');
+  next();
+});
+app.use(
+  express.static(__dirname + '/node_modules/@actual-app/web/build', {
+    index: false
+  })
+);
 app.get('/*', (req, res) => {
   res.sendFile(__dirname + '/node_modules/@actual-app/web/build/index.html');
 });
@@ -43,8 +55,8 @@ async function run() {
   await accountApp.init();
   await syncApp.init();
 
-  console.log('Listening on ' + config.port + '...');
-  app.listen(config.port);
+  console.log('Listening on ' + config.hostname + ':' + config.port + '...');
+  app.listen(config.port, config.hostname);
 }
 
 run().catch(err => {
